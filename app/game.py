@@ -1,6 +1,7 @@
 import networkx as nx
 from collections import OrderedDict
-import random
+import itertools as it
+
 
 '''
 Tasks:
@@ -29,8 +30,8 @@ class Game:
         self.snakes = []
         self.adj_enemy_head = []
         self.snake_weight = 10
-        self.open_weight = 5
-        self.food_weight = 1
+        self.open_weight = 1
+        self.food_weight = 0.1
 
     def update_game(self, game_data):
         self.game_data = game_data
@@ -41,6 +42,7 @@ class Game:
         self.foods = [(food["x"], food["y"]) for food in self.game_data["board"]["food"]]
         self.update_snakes()
 
+    # CHANGE TO MULTIPLE SIMPLE FUNCTIONS
     def update_snakes(self):
         # clear snakes
         self.snakes = []
@@ -93,13 +95,32 @@ class Game:
 
     def get_move(self):
         print "get move"
-        return self.get_direction()
+        all_paths = []
 
-    def get_direction(self):
+        # add every path to all_paths
+        for node in self.board:
+            try:
+                all_paths.append(nx.all_simple_paths(self.board, self.head, node))
+            except nx.NetworkXNoPath:
+                continue
+
+        # sort all_paths by lowest average weight
+        all_paths.sort(key=self.get_avg_weight)
+
+        # return path with lowest avg weight
+        return self.get_direction(all_paths[0][1])
+
+    def get_direction(self, destination):
         print "get direction"
-        directions = ['up', 'down', 'left', 'right']
-        direction = random.choice(directions)
-        return direction
+
+        # return direction to node
+        if self.head[0] == destination[0]:
+            if self.head[1] > destination[1]:
+                return 'up'
+            return 'down'
+        if self.head[0] > destination[0]:
+            return 'left'
+        return 'right'
 
     def get_adjacent(self, current_node):
         x = current_node[0]
@@ -107,6 +128,12 @@ class Game:
         adj_nodes = []
         adj_nodes.extend(node for node in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] if self.board.has_node(node))
         return adj_nodes
+
+    def get_avg_weight(self, path):
+        total_weight = 0
+        for node, next_node in it.pairwise(path):
+            total_weight += self.board.edges[node][next_node]['weight']
+        return total_weight/len(path)
 
     def get_snake_length(self, snake):
         return len(list(OrderedDict.fromkeys([str(point["x"]) + str(point["y"]) for point in snake])))
