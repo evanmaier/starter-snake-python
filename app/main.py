@@ -1,10 +1,11 @@
 import json
 import os
-import random
 import bottle
 from game import Game
 
 from api import ping_response, start_response, move_response, end_response
+
+game = ""
 
 @bottle.route('/')
 def index():
@@ -30,6 +31,7 @@ def ping():
     such as Heroku, from sleeping the application instance.
     """
     return ping_response()
+
 
 @bottle.post('/start')
 def start():
@@ -80,6 +82,7 @@ def end():
     print(json.dumps(data))
 
     return end_response()
+
 
 # Expose WSGI app (so gunicorn can find it)
 application = bottle.default_app()

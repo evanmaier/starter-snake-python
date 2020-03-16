@@ -1,7 +1,5 @@
 import networkx as nx
 from collections import OrderedDict
-import itertools as it
-
 
 '''
 Tasks:
@@ -15,6 +13,7 @@ Tasks:
 - snake weight is 10
 - food weight is 1
 '''
+
 
 class Game:
     def __init__(self, game_data):
@@ -31,8 +30,8 @@ class Game:
         self.adj_enemy_head = []
         self.snake_weight = 10
         self.open_weight = 1
-        self.food_weight = 0.1
-        self.max_path_len = 5
+        self.food_weight = -10
+        self.max_path_len = 6
 
     def update_game(self, game_data):
         self.game_data = game_data
@@ -98,24 +97,29 @@ class Game:
 
     def get_move(self):
         print "get move"
-        all_paths = []
+        if self.game_data['turn'] == 0:
+            return 'up'
 
+        all_paths = []
         # add every path to all_paths
         for node in self.board.nodes:
             try:
-                all_paths.append(nx.all_simple_paths(self.board, self.head, node, cutoff=self.max_path_len))
+                paths = list(nx.all_simple_paths(self.board, source=self.head, target=node, cutoff=self.max_path_len))
+                for path in paths:
+                    if len(path) > 1:
+                        all_paths.append(path)
             except nx.NetworkXNoPath:
                 continue
 
         # sort all_paths by lowest average weight
-        all_paths.sort(key=self.get_avg_weight)
+        all_paths.sort(key=self.get_weight_sum)
 
         # return path with lowest avg weight
         return self.get_direction(all_paths[0])
 
     def get_direction(self, path):
         print "get direction"
-        destination = [next(path), next(path)]
+        destination = path[1]
         # return direction to node
         if self.head[0] == destination[0]:
             if self.head[1] > destination[1]:
@@ -132,16 +136,13 @@ class Game:
         adj_nodes.extend(node for node in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] if self.board.has_node(node))
         return adj_nodes
 
-    def get_avg_weight(self, all_paths):
-        total_weight = 0
-        for path in all_paths:
-            if len(path) < 2:
-                continue
-            for i in range(1, len(path)):
-                node = path[i-1]
-                next_node = path[i]
-                total_weight += self.board.edges[node, next_node]['weight']
-            return total_weight/len(path)
+    def get_weight_sum(self, path):
+        weight_sum = 0
+        for edge in nx.utils.pairwise(path):
+            if self.board.edges[edge]['weight']<0:
+                print self.board.edges[edge]['weight']
+            weight_sum += self.board.edges[edge]['weight']
+        return weight_sum
 
     def get_snake_length(self, snake):
         return len(list(OrderedDict.fromkeys([str(point["x"]) + str(point["y"]) for point in snake])))
