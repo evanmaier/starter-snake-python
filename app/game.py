@@ -64,11 +64,15 @@ class Game:
         self.board = nx.Graph()
         for y in range(self.board_height):
             for x in range(self.board_width):
-                self.board.add_node((x, y), has_snake=False, my_tail=False)
+                self.board.add_node((x, y), has_snake=False, my_tail=False, has_food=False)
 
         # add attribute has_snake
         for node in self.snakes:
             self.board.nodes[node]['has_snake'] = True
+
+        # add attribute has food
+        for food in self.foods:
+            self.board.nodes[node]['has_food'] = True
 
         # add attribute my_tail
         self.board.nodes[self.tail]['my_tail'] = True
@@ -89,6 +93,10 @@ class Game:
                 elif self.board.nodes[current_node]['has_snake']:
                     self.board.add_edge(current_node, adj_node, weight=self.snake_weight)
 
+                # has food
+                elif self.board.nodes[current_node]['has_food']:
+                    self.board.add_edge(current_node, adj_node, weight=self.food_weight)
+                    
                 # open space
                 elif adj_node not in self.snakes:
                     self.board.add_edge(current_node, adj_node, weight=self.open_weight)
