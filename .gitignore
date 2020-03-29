@@ -4,3 +4,5 @@ battlesnake
 .idea
 .vscode
 test.py
+app.py
+graph.py

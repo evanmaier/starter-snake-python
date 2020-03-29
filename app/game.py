@@ -28,10 +28,11 @@ class Game:
         self.board = nx.Graph()
         self.snakes = []
         self.adj_enemy_head = []
+        self.tail_weight = -1
         self.snake_weight = 10
         self.open_weight = 1
         self.food_weight = -10
-        self.max_path_len = 6
+        self.max_path_len = 5
 
     def update_game(self, game_data):
         self.game_data = game_data
@@ -56,44 +57,41 @@ class Game:
         if self.game_data["turn"] == 0 or self.game_data["turn"] == 1:
             return
 
-        # add my body without head and tail to self.snakes
-        self.snakes.extend([(point["x"], point["y"]) for point in self.game_data["you"]["body"][1:-1]])
+        # add my body to self.snakes
+        self.snakes.extend([(point["x"], point["y"]) for point in self.game_data["you"]["body"][1:]])
 
     def update_board(self):
         self.board = nx.Graph()
         for y in range(self.board_height):
             for x in range(self.board_width):
-                current_node = (x, y)
+                self.board.add_node((x, y), has_snake=False, my_tail=False)
 
-                # add attribute has_snake
-                if current_node in self.snakes:
-                    self.board.add_node(current_node, has_snake=True, my_tail=False)
+        # add attribute has_snake
+        for node in self.snakes:
+            self.board.nodes[node]['has_snake'] = True
 
-                # add attribute my_tail
-                if current_node == self.tail:
-                    self.board.add_node(current_node, has_snake=True, my_tail=True)
+        # add attribute my_tail
+        self.board.nodes[self.tail]['my_tail'] = True
 
-                else:
-                    self.board.add_node(current_node, has_snake=False, my_tail=False)
+        # add edges to node
+        self.add_edges()
 
-                # add edges to node
-                self.add_edges(current_node)
+    def add_edges(self):
+        for current_node in self.board.nodes:
+            for adj_node in self.get_adjacent(current_node):
 
-    def add_edges(self, current_node):
-        for adj_node in self.get_adjacent(current_node):
+                # don't add edge from head to tail if my length is 2
+                if self.my_length == 2:
+                    if (current_node not in [self.head, self.tail]) or (adj_node not in [self.head, self.tail]):
+                        self.board.add_edge(current_node, adj_node, weight=self.open_weight)
 
-            # don't add head or tail if my length is 2
-            if self.my_length == 2:
-                if (current_node not in [self.head, self.tail]) or (adj_node not in [self.head, self.tail]):
-                    self.board.add_edge(adj_node, current_node, weight=self.open_weight)
+                # has snake
+                elif self.board.nodes[current_node]['has_snake']:
+                    self.board.add_edge(current_node, adj_node, weight=self.snake_weight)
 
-            # node has snake
-            elif self.board.nodes[adj_node]['has_snake']:
-                self.board.add_edge(adj_node, current_node, weight=self.snake_weight)
-
-            # open space
-            else:
-                self.board.add_edge(adj_node, current_node, weight=self.open_weight)
+                # open space
+                elif adj_node not in self.snakes:
+                    self.board.add_edge(current_node, adj_node, weight=self.open_weight)
 
     def get_move(self):
         print "get move"
@@ -106,20 +104,22 @@ class Game:
             try:
                 paths = list(nx.all_simple_paths(self.board, source=self.head, target=node, cutoff=self.max_path_len))
                 for path in paths:
-                    if len(path) > 1:
-                        all_paths.append(path)
+                    all_paths.append(path)
             except nx.NetworkXNoPath:
                 continue
 
-        # sort all_paths by lowest average weight
-        all_paths.sort(key=self.get_weight_sum)
+        # sort all_paths by lowest weight
+        all_paths.sort(key=self.get_weight)
 
         # return path with lowest avg weight
         return self.get_direction(all_paths[0])
 
     def get_direction(self, path):
         print "get direction"
+        print 'path followed: ', path
+        print 'path weight: ', self.get_weight(path)
         destination = path[1]
+        # print self.board.nodes[destination]['has_snake']
         # return direction to node
         if self.head[0] == destination[0]:
             if self.head[1] > destination[1]:
@@ -136,12 +136,11 @@ class Game:
         adj_nodes.extend(node for node in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] if self.board.has_node(node))
         return adj_nodes
 
-    def get_weight_sum(self, path):
+    def get_weight(self, path):
         weight_sum = 0
         for edge in nx.utils.pairwise(path):
-            if self.board.edges[edge]['weight']<0:
-                print self.board.edges[edge]['weight']
-            weight_sum += self.board.edges[edge]['weight']
+            weight = self.board.edges[edge]['weight']
+            weight_sum += weight
         return weight_sum
 
     def get_snake_length(self, snake):
