@@ -3,7 +3,11 @@ from collections import OrderedDict
 
 '''
 Tasks:
+- favor nodes in center over edges
+- look for open space
 - add attribute has_head to nodes
+- target enemy snake heads if enemy smaller
+- avoid enemy snake heads if enemy bigger
 - limit scope and optimise
 - look ahead
 '''
@@ -24,7 +28,7 @@ class Game:
         self.adj_enemy_head = []
         self.tail_weight = -1.0
         self.snake_weight = 10.0
-        self.open_weight = 1.0
+        self.open_weight = 0.9
         self.food_weight = -5.0
         self.max_path_len = 5
 
