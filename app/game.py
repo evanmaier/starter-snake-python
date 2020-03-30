@@ -3,15 +3,9 @@ from collections import OrderedDict
 
 '''
 Tasks:
-- make board
-- add attribute has_snake to nodes
-- add attribute has_tail to nodes
 - add attribute has_head to nodes
-- add attribute has_food to nodes
-- weight edges depending on attributes
-- neutral weight is 5
-- snake weight is 10
-- food weight is 1
+- limit scope and optimise
+- look ahead
 '''
 
 
@@ -28,10 +22,10 @@ class Game:
         self.board = nx.Graph()
         self.snakes = []
         self.adj_enemy_head = []
-        self.tail_weight = -1
-        self.snake_weight = 10
-        self.open_weight = 1
-        self.food_weight = -10
+        self.tail_weight = -1.0
+        self.snake_weight = 10.0
+        self.open_weight = 1.0
+        self.food_weight = -5.0
         self.max_path_len = 5
 
     def update_game(self, game_data):
@@ -62,6 +56,10 @@ class Game:
 
     def update_board(self):
         self.board = nx.Graph()
+        self.add_nodes()
+        self.add_edges()
+
+    def add_nodes(self):
         for y in range(self.board_height):
             for x in range(self.board_width):
                 self.board.add_node((x, y), has_snake=False, my_tail=False, has_food=False)
@@ -76,9 +74,6 @@ class Game:
 
         # add attribute my_tail
         self.board.nodes[self.tail]['my_tail'] = True
-
-        # add edges to node
-        self.add_edges()
 
     def add_edges(self):
         for current_node in self.board.nodes:
@@ -117,7 +112,7 @@ class Game:
                 continue
 
         # sort all_paths by lowest weight
-        all_paths.sort(key=self.get_weight)
+        all_paths.sort(key=self.get_avg_weight)
 
         # return path with lowest avg weight
         return self.get_direction(all_paths[0])
@@ -125,9 +120,9 @@ class Game:
     def get_direction(self, path):
         print "get direction"
         print 'path followed: ', path
-        print 'path weight: ', self.get_weight(path)
+        print 'path weight: ', self.get_avg_weight(path)
         destination = path[1]
-        # print self.board.nodes[destination]['has_snake']
+
         # return direction to node
         if self.head[0] == destination[0]:
             if self.head[1] > destination[1]:
@@ -144,12 +139,13 @@ class Game:
         adj_nodes.extend(node for node in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] if self.board.has_node(node))
         return adj_nodes
 
-    def get_weight(self, path):
+    def get_avg_weight(self, path):
         weight_sum = 0
         for edge in nx.utils.pairwise(path):
             weight = self.board.edges[edge]['weight']
             weight_sum += weight
-        return weight_sum
+        avg_weight = weight_sum/len(path)
+        return avg_weight
 
     def get_snake_length(self, snake):
         return len(list(OrderedDict.fromkeys([str(point["x"]) + str(point["y"]) for point in snake])))
