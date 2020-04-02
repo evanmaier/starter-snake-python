@@ -27,6 +27,7 @@ class Game:
         self.snakes = []
         self.adj_enemy_head = []
         self.tail_weight = -1.0
+        self.head_weight = 1
         self.snake_weight = 10.0
         self.open_weight = 0.9
         self.food_weight = -5.0
@@ -66,39 +67,22 @@ class Game:
     def add_nodes(self):
         for y in range(self.board_height):
             for x in range(self.board_width):
-                self.board.add_node((x, y), has_snake=False, my_tail=False, has_food=False)
-
-        # add attribute has_snake
-        for node in self.snakes:
-            self.board.nodes[node]['has_snake'] = True
-
-        # add attribute has food
-        for node in self.foods:
-            self.board.nodes[node]['has_food'] = True
-
-        # add attribute my_tail
-        self.board.nodes[self.tail]['my_tail'] = True
+                node = (x, y)
+                weight = self.open_weight
+                if node in self.snakes:
+                    weight += self.snake_weight
+                if node in self.foods:
+                    weight += self.food_weight
+                if node == self.tail:
+                    weight += self.tail_weight
+                if node == self.head:
+                    weight += self.head_weight
+                self.board.add_node(node, weight=weight)
 
     def add_edges(self):
         for current_node in self.board.nodes:
             for adj_node in self.get_adjacent(current_node):
-
-                # don't add edge from head to tail if my length is 2
-                if self.my_length == 2:
-                    if (current_node not in [self.head, self.tail]) or (adj_node not in [self.head, self.tail]):
-                        self.board.add_edge(current_node, adj_node, weight=self.open_weight)
-
-                # has snake
-                elif self.board.nodes[current_node]['has_snake']:
-                    self.board.add_edge(current_node, adj_node, weight=self.snake_weight)
-
-                # has food
-                elif self.board.nodes[current_node]['has_food']:
-                    self.board.add_edge(current_node, adj_node, weight=self.food_weight)
-
-                # open space
-                elif adj_node not in self.snakes:
-                    self.board.add_edge(current_node, adj_node, weight=self.open_weight)
+                self.board.add_edge(current_node, adj_node)
 
     def get_move(self):
         print "get move"
@@ -111,7 +95,8 @@ class Game:
             try:
                 paths = list(nx.all_simple_paths(self.board, source=self.head, target=node, cutoff=self.max_path_len))
                 for path in paths:
-                    all_paths.append(path)
+                    if len(path) > 1:
+                        all_paths.append(path)
             except nx.NetworkXNoPath:
                 continue
 
@@ -145,8 +130,8 @@ class Game:
 
     def get_avg_weight(self, path):
         weight_sum = 0
-        for edge in nx.utils.pairwise(path):
-            weight = self.board.edges[edge]['weight']
+        for node in path:
+            weight = self.board.nodes[node]['weight']
             weight_sum += weight
         avg_weight = weight_sum/len(path)
         return avg_weight
