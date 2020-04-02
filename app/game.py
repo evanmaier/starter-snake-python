@@ -28,8 +28,8 @@ class Game:
         self.snakes = []
         self.adj_enemy_head = []
         self.max_path_len = 5
-        self.tail_weight = 10.0
-        self.snake_weight = 10.0
+        self.tail_weight = 19.0
+        self.snake_weight = 19.0
         self.open_weight = 1.0
         self.food_weight = -5.0
 
@@ -41,6 +41,7 @@ class Game:
         self.tail = (self.game_data["you"]["body"][-1]["x"], self.game_data["you"]["body"][-1]["y"])
         self.foods = [(food["x"], food["y"]) for food in self.game_data["board"]["food"]]
         self.update_snakes()
+        self.update_food_weight()
         self.update_board()
 
     def update_snakes(self):
@@ -104,6 +105,7 @@ class Game:
         print "get direction"
         print 'path followed: ', path
         print 'path weight: ', self.get_avg_weight(path)
+        print 'node weights: ', [self.board.nodes[node]['weight'] for node in path]
         destination = path[1]
 
         # return direction to node
@@ -132,3 +134,6 @@ class Game:
 
     def get_snake_length(self, snake):
         return len(list(OrderedDict.fromkeys([str(point["x"]) + str(point["y"]) for point in snake])))
+
+    def update_food_weight(self):
+        return -5 + 0.03*self.health
