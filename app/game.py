@@ -8,8 +8,9 @@ Tasks:
 - add attribute has_head to nodes
 - target enemy snake heads if enemy smaller
 - avoid enemy snake heads if enemy bigger
-- limit scope and optimise
-- look ahead
+- optimise
+- account for new spaces opening 
+- remove nodes more than n spaces away from snakes if evaluating paths less than length n
 '''
 
 
@@ -29,7 +30,7 @@ class Game:
         self.max_path_len = 5
         self.tail_weight = 10.0
         self.snake_weight = 10.0
-        self.open_weight = 0.9
+        self.open_weight = 1.0
         self.food_weight = -5.0
 
     def update_game(self, game_data):
@@ -42,7 +43,6 @@ class Game:
         self.update_snakes()
         self.update_board()
 
-    # CHANGE TO MULTIPLE SIMPLE FUNCTIONS
     def update_snakes(self):
         # clear snakes
         self.snakes = []
@@ -78,22 +78,27 @@ class Game:
         if self.game_data['turn'] == 0:
             return 'up'
 
-        all_paths = []
-        # add every path to all_paths
+        # generate dictionary to hold paths of all lengths <= max_path_len
+        all_paths = {}
+        for n in range(1, self.max_path_len+2):
+            all_paths[n] = []
+
+        # add paths of length n to list of paths with length n in all_paths dictionary
         for node in self.board.nodes:
             try:
                 paths = list(nx.all_simple_paths(self.board, source=self.head, target=node, cutoff=self.max_path_len))
                 for path in paths:
-                    if len(path) > 1:
-                        all_paths.append(path)
+                    all_paths[len(path)].append(path)
             except nx.NetworkXNoPath:
                 continue
 
-        # sort all_paths by lowest weight
-        all_paths.sort(key=self.get_avg_weight)
+        # sort each list of paths in all_paths by lowest weight
+        for key in all_paths:
+            all_paths[key].sort(key=self.get_avg_weight)
 
-        # return path with lowest avg weight
-        return self.get_direction(all_paths[0])
+        # return longest path with lowest avg weight
+        for key in range(self.max_path_len+1, 1, -1):
+            return self.get_direction(all_paths[key][0])
 
     def get_direction(self, path):
         print "get direction"
