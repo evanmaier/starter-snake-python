@@ -26,12 +26,11 @@ class Game:
         self.board = nx.Graph()
         self.snakes = []
         self.adj_enemy_head = []
-        self.tail_weight = -1.0
-        self.head_weight = 1
+        self.max_path_len = 5
+        self.tail_weight = 10.0
         self.snake_weight = 10.0
         self.open_weight = 0.9
         self.food_weight = -5.0
-        self.max_path_len = 5
 
     def update_game(self, game_data):
         self.game_data = game_data
@@ -47,17 +46,9 @@ class Game:
     def update_snakes(self):
         # clear snakes
         self.snakes = []
-        # Add all snakes except me to self.snakes
+        # Add all snakes to self.snakes
         for snake in self.game_data["board"]["snakes"]:
-            if snake["id"] != self.game_data["you"]["id"]:
-                self.snakes.extend([(point["x"], point["y"]) for point in snake["body"][:-1]])
-
-        # turn 0, 1 edge cases don't add me
-        if self.game_data["turn"] == 0 or self.game_data["turn"] == 1:
-            return
-
-        # add my body to self.snakes
-        self.snakes.extend([(point["x"], point["y"]) for point in self.game_data["you"]["body"][1:]])
+            self.snakes.extend([(point["x"], point["y"]) for point in snake["body"][:]])
 
     def update_board(self):
         self.board = nx.Graph()
@@ -75,8 +66,6 @@ class Game:
                     weight += self.food_weight
                 if node == self.tail:
                     weight += self.tail_weight
-                if node == self.head:
-                    weight += self.head_weight
                 self.board.add_node(node, weight=weight)
 
     def add_edges(self):
